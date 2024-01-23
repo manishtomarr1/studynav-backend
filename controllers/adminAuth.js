@@ -1,9 +1,22 @@
 import Admin from "../modals/admin.js";
 import slot from "../modals/slot.js";
+import verifyModel from '../modals/otpVerify.js'
 import bcrypt from "bcryptjs";
 import { dbConnection } from "../helpers/dbConnection.js";
 import jwt from 'jsonwebtoken'; // Importing jwt directly
 import 'dotenv/config'
+import {ses} from '../config.js'
+import { nanoid } from 'nanoid';
+import {createEmailTemplate} from '../helpers/emailVerify.js'
+
+const generateOTP = () => {
+  // Generate a random 6-digit OTP consisting of numbers
+  const min = 100000; // Minimum 6-digit number
+  const max = 999999; // Maximum 6-digit number
+  const numericOTP = Math.floor(Math.random() * (max - min + 1)) + min;
+  return numericOTP.toString(); // Convert to string
+};
+
 
 export const adminLogin = async (req, res) => {
   dbConnection();
@@ -175,5 +188,101 @@ export const updateNotConfirm = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+
+
+export const sendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+  const otp = generateOTP();
+
+  console.log(email, "email");
+  console.log(otp, "otp");
+
+  try {
+    // Check if the email already exists in the database
+    const existingRecord = await verifyModel.findOne({ email });
+
+    if (existingRecord) {
+      return res.status(400).json({ error: 'Email is already in use. Please choose another one.' });
+    }
+
+    const params = createEmailTemplate(email, otp);
+    const sendEmail = ses.sendEmail(params).promise();
+
+    await sendEmail;
+    await new verifyModel({ email, otp }).save(); // Save OTP to the database
+
+    res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const verifyOtp =  async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const record = await verifyModel.findOne({ email });
+
+    if (record && record.otp === otp) {
+      // OTP match
+      res.status(200).json({ message: 'OTP verified successfully' });
+    } else {
+      // OTP mismatch
+      res.status(400).json({ message: 'Invalid OTP' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const sendFormDetailsEmail = async (req, res) => {
+  const {
+    name,
+    email,
+    country,
+    gender,
+    interestedArea,
+    discussionTopics,
+    doubtsQuestions,
+    // Add other form fields here
+  } = req.body;
+
+  try {
+    // Modify the email template to include all the form details
+    const params = {
+      Source: 'manishtomar.uk@gmail.com',
+      Destination: { ToAddresses: ['manishtomar.uk@gmail.com'] },
+      Message: {
+        Subject: { Data: 'New Form Submission from StudyNav UK' },
+        Body: {
+          Text: {
+            Data: `
+              Name: ${name}
+              Email: ${email}
+              Country: ${country}
+              Gender: ${gender}
+              Interested Area: ${interestedArea}
+              Discussion Topics: ${discussionTopics.join(", ")}
+              Doubts/Questions: ${doubtsQuestions}
+            `
+          },
+          // Optionally, you can use HTML body
+        },
+      },
+    };
+
+    // Await the completion of sendEmail before sending the response
+    await ses.sendEmail(params).promise();
+
+    res.status(200).json({ message: 'Form details email sent successfully' });
+  } catch (error) {
+    console.error("Error sending form details email:", error);
+    res.status(500).json({ error: error.message });
   }
 };
