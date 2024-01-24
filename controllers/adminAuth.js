@@ -25,22 +25,30 @@ export const adminLogin = async (req, res) => {
   try {
     console.log(">>>>>>>>>> api hit");
     const admin = await Admin.findOne({ email: email });
-    // console.log("admin=>>>>>>>", admin);
+
     if (!admin) {
       return res.status(401).json({ message: "admin not found" });
     }
-    const newPassword = bcrypt.compareSync(password, admin.password);
-    if (!newPassword) {
+
+    const isPasswordValid = bcrypt.compareSync(password, admin.password);
+
+    if (!isPasswordValid) {
       return res.status(401).json({ message: "incorrect password" });
     }
-    const token = jwt.sign({ adminId: admin._id }, process.env.jwtSecretKey, { expiresIn: '7d' });
 
-    res.status(200).json({ message: "Login successful", token: token });
+    // Generate access token
+    const accessToken = jwt.sign({ adminId: admin._id }, process.env.jwtSecretKey, { expiresIn: '7d' });
+
+    // Generate refresh token
+    const refreshToken = jwt.sign({ adminId: admin._id }, process.env.refreshTokenSecret, { expiresIn: '30d' });
+
+    res.status(200).json({ message: "Login successful", token: accessToken, refreshToken });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const addSlot = async (req, res) => {
   dbConnection();
