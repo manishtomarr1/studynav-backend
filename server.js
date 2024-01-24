@@ -11,6 +11,8 @@ import 'dotenv/config'
 const app = express();
 app.use(bodyParser.json());
 import { dbConnection } from "./helpers/dbConnection.js";
+import cron from 'node-cron';
+import slotModel from './modals/slot.js'; // assuming this is the path to your slot model
 // Update the route to accept data
 
 mongoose.set("strictQuery", false);
@@ -29,6 +31,25 @@ app.get("/", (req, res) => {
   res.json({
     data: "node.js welcome you! you are now connected with me.... ",
   });
+});
+
+cron.schedule('* * * * *', async () => { // This runs every minute, adjust as needed
+  try {
+    const now = new Date();
+    const expiredSlots = await slotModel.find({
+      date: { $lt: now },
+      booked: false
+    });
+
+    if (expiredSlots.length > 0) {
+      await slotModel.deleteMany({
+        _id: { $in: expiredSlots.map(slot => slot._id) }
+      });
+      console.log(`${expiredSlots.length} expired slots deleted`);
+    }
+  } catch (error) {
+    console.error('Error in deleting expired slots:', error);
+  }
 });
 
 async function createDefaultAdmin() {
