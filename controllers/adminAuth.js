@@ -17,7 +17,7 @@ const generateOTP = () => {
   return numericOTP.toString(); // Convert to string
 };
 
-kmrvfevelvrv4/
+// kmrvfevelvrv4
 
 
 export const adminLogin = async (req, res) => {
