@@ -9,6 +9,17 @@ import {ses} from '../config.js'
 import { nanoid } from 'nanoid';
 import {createEmailTemplate} from '../helpers/emailVerify.js'
 
+// const generateOTP = () => {
+//   // Generate a random 6-digit OTP consisting of numbers
+//   const min = 100000; // Minimum 6-digit number
+//   const max = 999999; // Maximum 6-digit number
+//   const numericOTP = Math.floor(Math.random() * (max - min + 1)) + min;
+//   return numericOTP.toString(); // Convert to string
+// };
+
+// kmrvfevelvrv4
+
+
 const generateOTP = () => {
   // Generate a random 6-digit OTP consisting of numbers
   const min = 100000; // Minimum 6-digit number
@@ -16,9 +27,6 @@ const generateOTP = () => {
   const numericOTP = Math.floor(Math.random() * (max - min + 1)) + min;
   return numericOTP.toString(); // Convert to string
 };
-
-// kmrvfevelvrv4
-
 
 export const adminLogin = async (req, res) => {
   dbConnection();
